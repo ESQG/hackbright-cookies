@@ -7,7 +7,7 @@ Authors: Joel Burton, Christian Fernandez, Meggie Mahnken, Katie Byers.
 """
 
 
-from flask import Flask, render_template, redirect, flash, session
+from flask import Flask, render_template, redirect, flash, session, request
 import jinja2
 
 import melons
@@ -68,15 +68,18 @@ def show_shopping_cart():
     # - get the cart dictionary from the session
     session["cart"] = session.get("cart",{})
     cart = session['cart']
-    melon_to_purchase = []
+    melons_to_purchase = []
     order_total = 0
+
     for melon_id in cart:
-        actual_melon = melons.get_by_id(melon_id)
-        cost_of_melon = cart[melon_id] * actual_melon.price
+        melon_object = melons.get_by_id(melon_id)
+        cost_of_melon = cart[melon_id] * melon_object.price
+        melon_object.quantity = cart[melon_id]
+        melon_object.total_cost = cost_of_melon
+
+        melons_to_purchase.append(melon_object)
         order_total += cost_of_melon
-        actual_melon.quantity = cart[melon_id]
-        actual_melon.total_cost = cost_of_melon
-        melon_to_purchase.append(actual_melon)
+
     # - create a list to hold melon objects and a variable to hold the total
     #   cost of the order
     # - loop over the cart dictionary, and for each melon id:
@@ -92,7 +95,7 @@ def show_shopping_cart():
 
     return render_template("cart.html",
                             order_total=order_total,
-                            purchases=melon_to_purchase)
+                            purchases=melons_to_purchase)
                             # Melon=melons.Melon
                           
 
@@ -106,15 +109,14 @@ def add_to_cart(melon_id):
     cart'."""
 
     if "cart" in session:
-        if melon_id in session['cart']:
-            session["cart"][melon_id] += 1
-        else:
-            session["cart"][melon_id] = 1
+        session['cart'][melon_id] = session['cart'].get(melon_id, 0) + 1
     else:
         session["cart"] = {melon_id:1}
 
+    # session['cart'][melon_id] = session.get('cart', {melon_id: 0}).get(melon_id, 0) + 1
+
+
     flash("Melon %s added to cart" % melon_id)
-    print session['cart']
 
     # TODO: Finish shopping cart functionalit
 
@@ -145,13 +147,17 @@ def process_login():
     dictionary, look up the user, and store them in the session.
     """
 
-    email = request.form['email']
-    password = request.form['password']
+    email = request.form.get('email')
+    print email
+    password = request.form.get('password')
+    print password
     customer = customers.get_by_email(email)
 
+    # TO DO: how do you login if you don't have an account yet???
+
     if password == customer.password:
-        session['current_user'] = customer.name  # IN PROGRESS FIX THIS
-        flash("Logged in as %s" % username)
+        session['current_user'] = customer.full_name  # IN PROGRESS FIX THIS
+        flash("Logged in as %s" % customer.full_name)
         return redirect("/melons")
     else:
         flash("Wrong password!")
