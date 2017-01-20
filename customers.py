@@ -27,7 +27,7 @@ def read_customers_from_file(filepath):
     with open(filepath) as data_file:
         for line in data_file:
             (first_name, last_name, email, password) = line.strip().split("|")
-        customer_dict[email] = Customer(first_name, last_name, email, password)
+            customer_dict[email] = Customer(first_name, last_name, email, password)
 
     return customer_dict
 
